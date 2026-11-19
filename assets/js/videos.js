@@ -65,7 +65,7 @@ window.VIDEO_LIBRARY = {
       kind: "Heatmap",
       date: "2026-11-16",
       fps: 30, width: 1300, height: 1040, duration: 1.267,
-      fit: { file: "test_261118_airmap_movingman.mp4", fps: 60, duration: 30 }
+      fit: { file: "test_261118_airmap_30s_movingman.mp4", fps: 60, duration: 30 }
     }
   ]
 };

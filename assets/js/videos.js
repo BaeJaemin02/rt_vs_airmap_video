@@ -26,8 +26,10 @@ window.VIDEO_LIBRARY = {
     // views: 그룹 머리에 '어떤 영상을 띄울지' 버튼을 표시. show 는 영상 id 목록, defaultView 는 처음 선택(0부터)
     {
       source: "RT", title: "Ray Tracing", desc: "Sionna RT · 광선 경로와 heatmap",
-      rates: [1, 16],
+      rates: [1],
       fitSeconds: 30, // 영상 길이가 이 초가 되도록 배속을 맞추는 버튼
+      rateLabels: { 1: "속도" }, // 버튼 이름 (없으면 '1×'): 실제 계산 속도 비교
+      fitLabel: "위치별",        // 버튼 이름 (없으면 '30초'): 같은 위치의 path gain 비교
       views: [
         { label: "Heatmap", show: ["rt-heatmap"] },
         { label: "Ray", show: ["rt-ray"] },
@@ -35,7 +37,8 @@ window.VIDEO_LIBRARY = {
       ],
       defaultView: 0
     },
-    { source: "AirMap", title: "AirMap", desc: "AirMap 예측 heatmap", rates: [1], fitSeconds: 30 }
+    { source: "AirMap", title: "AirMap", desc: "AirMap 예측 heatmap", rates: [1], fitSeconds: 30,
+      rateLabels: { 1: "속도" }, fitLabel: "위치별" }
   ],
   videos: [
     {

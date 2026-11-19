@@ -158,7 +158,7 @@ svg.fill { fill: currentColor; stroke: none; }
 }
 .seg-mini button:hover { color: var(--text); }
 .view-seg button { font-family: var(--font); font-size: 12px; }
-.seg-mini .fit-btn { font-family: var(--font); font-size: 12px; }
+.seg-mini .fit-btn, .seg-mini .named { font-family: var(--font); font-size: 12px; }
 .seg-mini button[aria-pressed="true"] {
   background: color-mix(in srgb, var(--c) 18%, var(--surface-3)); color: var(--c); font-weight: 600;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent);

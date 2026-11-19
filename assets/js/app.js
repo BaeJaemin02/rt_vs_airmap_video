@@ -582,8 +582,11 @@
           </div>` : ''}
           ${rates.length || fit ? `
           <div class="seg-mini rate-seg" role="group" aria-label="${esc(g.title || source)} 재생 배속">
-            ${rates.map(r => `<button type="button" data-rate="${r}" aria-pressed="${r === 1}">${rateLabel(r)}</button>`).join('')}
-            ${fit ? `<button type="button" class="fit-btn" data-fit="${fit}" aria-pressed="false" aria-label="영상 길이를 ${fit}초로 맞추기">${fit}초</button>` : ''}
+            ${rates.map(r => {
+              const name = g.rateLabels && g.rateLabels[r];
+              return `<button type="button" data-rate="${r}" aria-pressed="${r === 1}"${name ? ' class="named"' : ''}>${esc(name || rateLabel(r))}</button>`;
+            }).join('')}
+            ${fit ? `<button type="button" class="fit-btn" data-fit="${fit}" aria-pressed="false">${esc(g.fitLabel || `${fit}초`)}</button>` : ''}
           </div>` : ''}
           ${vids.length > 1 ? `
           <button type="button" class="btn btn-sm group-restart">

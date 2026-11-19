@@ -34,6 +34,7 @@
   const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const sourceKey = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const rateLabel = r => (r >= 1 ? `${+r.toFixed(2)}×` : `1/${Math.round(1 / r)}×`);
   const setText = (node, s) => { if (node && node.textContent !== s) node.textContent = s; };
   const now = () => performance.now();
 
@@ -569,6 +570,7 @@
       const g = info.get(source) || {};
       const views = (Array.isArray(g.views) ? g.views : []).filter(vw => Array.isArray(vw.show) && vw.show.length);
       const fit = Number(g.fitSeconds) > 0 ? Number(g.fitSeconds) : 0;
+      const rates = (Array.isArray(g.rates) ? g.rates : []).map(Number).filter(r => r > 0);
       const section = document.createElement('section');
       section.className = 'group';
       section.dataset.source = sourceKey(source);
@@ -583,6 +585,10 @@
           <div class="seg-mini view-seg" role="group" aria-label="${esc(g.title || source)} 표시할 영상">
             ${views.map((vw, i) => `<button type="button" data-view="${i}" aria-pressed="false">${esc(vw.label)}</button>`).join('')}
           </div>` : ''}
+          ${rates.length > 1 ? `
+          <div class="seg-mini rate-seg" role="group" aria-label="${esc(g.title || source)} 재생 배속">
+            ${rates.map(r => `<button type="button" data-rate="${r}" aria-pressed="${r === 1}">${rateLabel(r)}</button>`).join('')}
+          </div>` : ''}
           ${vids.length > 1 ? `
           <button type="button" class="btn btn-sm group-restart">
             ${ICON.restart}<span>처음부터 동시 재생</span>
@@ -592,11 +598,29 @@
 
       const body = $('.group-body', section);
       const groupPlayers = vids.map(v => createPlayer(v));
-      groupPlayers.forEach(p => { p.fitSec = fit; }); // 전용 영상이 없을 때 '위치별 비교' 배속 계산용
+      groupPlayers.forEach(p => {
+        p.fitSec = fit;  // 전용 영상이 없을 때 '위치별 비교' 배속 계산용
+        p.speedRate = 1; // '속도 비교'에서 고른 배속 (위치별 비교에 다녀와도 유지)
+      });
       groupPlayers.forEach(p => body.append(p.panel));
       if (groupPlayers.length > 1) groups.push(groupPlayers);
 
       $('.group-restart', section)?.addEventListener('click', () => restartAll(groupPlayers));
+
+      // 배속 ('속도 비교'에서만 표시): 그룹 안 모든 영상에 같은 배속, 보던 진행 위치는 이어 받음
+      const rateSeg = $('.rate-seg', section);
+      rateSeg?.addEventListener('click', e => {
+        const b = e.target.closest('button[data-rate]');
+        if (!b || b.getAttribute('aria-pressed') === 'true' || state.mode !== 'speed') return;
+        const r = Number(b.dataset.rate);
+        const vis = groupPlayers.filter(p => !p.hidden);
+        const ref = vis[0] || groupPlayers[0];
+        const x = durOf(ref) ? clamp(timeOf(ref) / durOf(ref), 0, 1) : 0;
+        const wasPlaying = vis.some(isPlayingP);
+        groupPlayers.forEach(p => { p.speedRate = r; setRateP(p, r); });
+        rateSeg.querySelectorAll('button').forEach(el => el.setAttribute('aria-pressed', String(el === b)));
+        if (vis.length) startTogether(vis, x * wallOf(ref, durOf(ref)), wasPlaying);
+      });
 
       // 보기: 그룹 안에서 어떤 영상을 띄울지. 숨긴 영상은 멈추고, 다시 띄우면 보이던 영상 시각에 맞춰 이어 재생
       const viewSeg = $('.view-seg', section);
@@ -674,9 +698,11 @@
     players.forEach(p => {
       if (mode === 'fit' && p.v.fit) { setSourceP(p, 'fit'); return; }
       setSourceP(p, 'main');
-      setRateP(p, mode === 'fit' && p.fitSec > 0 ? durOf(p) / p.fitSec : 1);
+      setRateP(p, mode === 'fit' ? (p.fitSec > 0 ? durOf(p) / p.fitSec : 1) : (p.speedRate || 1));
     });
     ui.modeSeg?.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+    // 배속 버튼은 '속도 비교'에서만 의미가 있으므로 그때만 표시
+    ui.board.querySelectorAll('.rate-seg').forEach(s => { s.hidden = mode !== 'speed'; });
     if (!initial) restartAll();
   }
 

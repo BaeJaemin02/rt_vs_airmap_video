@@ -164,6 +164,7 @@ svg.fill { fill: currentColor; stroke: none; }
 .group-desc + .spacer { display: none; }
 .btn-sm { height: 28px; padding: 0 10px; gap: 6px; font-size: 12px; border-radius: 7px; }
 .btn-sm svg { width: 14px; height: 14px; }
+.seg-mini[hidden] { display: none; }
 .seg-mini {
   flex: none; display: inline-flex; gap: 2px; padding: 2px;
   border: 1px solid var(--line-2); border-radius: 7px; background: var(--bg);

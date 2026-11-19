@@ -25,10 +25,12 @@ window.VIDEO_LIBRARY = {
   //   fit:   길이를 맞춘 영상(fit)으로 → 같은 위치의 path gain
   modes: { speed: "속도 비교", fit: "위치별 비교" },
   groups: [
+    // rates: '속도 비교'일 때 그룹 머리에 배속 버튼 표시 (그룹 안 영상 모두에 적용)
     // fitSeconds: '위치별 비교'에서 fit 영상이 없는 영상을 이 길이(초)로 맞춤 (배속 = 영상 길이 ÷ N)
     // views: 그룹 머리에 '어떤 영상을 띄울지' 버튼을 표시. show 는 영상 id 목록, defaultView 는 처음 선택(0부터)
     {
       source: "RT", title: "Ray Tracing", desc: "Sionna RT · 광선 경로와 heatmap",
+      rates: [1, 16],
       fitSeconds: 30,
       views: [
         { label: "Heatmap", show: ["rt-heatmap"] },

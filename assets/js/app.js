@@ -598,10 +598,7 @@
 
       const body = $('.group-body', section);
       const groupPlayers = vids.map(v => createPlayer(v));
-      groupPlayers.forEach(p => {
-        p.fitSec = fit;  // 전용 영상이 없을 때 '위치별 비교' 배속 계산용
-        p.speedRate = 1; // '속도 비교'에서 고른 배속 (위치별 비교에 다녀와도 유지)
-      });
+      groupPlayers.forEach(p => { p.fitSec = fit; }); // 전용 영상이 없을 때 '위치별 비교' 배속 계산용
       groupPlayers.forEach(p => body.append(p.panel));
       if (groupPlayers.length > 1) groups.push(groupPlayers);
 
@@ -617,7 +614,7 @@
         const ref = vis[0] || groupPlayers[0];
         const x = durOf(ref) ? clamp(timeOf(ref) / durOf(ref), 0, 1) : 0;
         const wasPlaying = vis.some(isPlayingP);
-        groupPlayers.forEach(p => { p.speedRate = r; setRateP(p, r); });
+        groupPlayers.forEach(p => setRateP(p, r));
         rateSeg.querySelectorAll('button').forEach(el => el.setAttribute('aria-pressed', String(el === b)));
         if (vis.length) startTogether(vis, x * wallOf(ref, durOf(ref)), wasPlaying);
       });
@@ -698,11 +695,14 @@
     players.forEach(p => {
       if (mode === 'fit' && p.v.fit) { setSourceP(p, 'fit'); return; }
       setSourceP(p, 'main');
-      setRateP(p, mode === 'fit' ? (p.fitSec > 0 ? durOf(p) / p.fitSec : 1) : (p.speedRate || 1));
+      setRateP(p, mode === 'fit' && p.fitSec > 0 ? durOf(p) / p.fitSec : 1);
     });
     ui.modeSeg?.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
-    // 배속 버튼은 '속도 비교'에서만 의미가 있으므로 그때만 표시
-    ui.board.querySelectorAll('.rate-seg').forEach(s => { s.hidden = mode !== 'speed'; });
+    // 배속 버튼은 '속도 비교'에서만 표시. 모드를 바꾸면 배속은 항상 1× 로 초기화
+    ui.board.querySelectorAll('.rate-seg').forEach(s => {
+      s.hidden = mode !== 'speed';
+      s.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.rate) === 1)));
+    });
     if (!initial) restartAll();
   }
 

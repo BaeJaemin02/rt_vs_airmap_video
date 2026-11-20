@@ -5,7 +5,7 @@
    - 영상마다 재생바가 따로 있고, 처음 열면 모든 영상이 준비되는 순간
      동시에 재생을 시작합니다 (각자 실제 길이대로 → 속도 차이가 그대로 보임).
    - 반복: 영상별 반복(그 영상만 계속 되풀이)과
-           전체 반복(가장 늦게 끝나는 영상까지 끝나면 모두 처음부터 동시에 다시 시작).
+           전체 반복(그룹마다 따로: 그룹 안 영상이 모두 끝나면 그 그룹만 처음부터 다시 시작).
    - 배속(선택): videos.js 그룹에 rates 를 2개 이상 적으면 그룹 머리에 배속 버튼 표시
        (0.0625×~16× 밖의 배속은 가상 시계에 맞춰 영상 위치를 옮기는 방식으로 흉내 냄)
    ========================================================= */
@@ -14,7 +14,7 @@
 
   const LIB = window.VIDEO_LIBRARY || { videos: [] };
   const VIDEOS = Array.isArray(LIB.videos) ? LIB.videos : [];
-  const SET_RESTART_DELAY = 1200; // 전체 반복 시 마지막 화면을 잠깐 보여준 뒤 재시작 (ms)
+  const SET_RESTART_DELAY = 500;  // 전체 반복 시 마지막 화면을 잠깐 보여준 뒤 재시작 (ms)
   const NATIVE_MIN = 0.0625;      // 브라우저 playbackRate 하한 (Chrome 기준)
   const NATIVE_MAX = 16;          // 브라우저 playbackRate 상한
 
@@ -172,7 +172,7 @@
     p.video.loop = on && !p.emu;
     p.el.loop.setAttribute('aria-pressed', String(on));
     if (on && wasDone) {
-      cancelSetRestart();
+      cancelSetRestart([p]);
       seekP(p, 0);
       playP(p);
     }
@@ -301,10 +301,10 @@
 
   /* ---------- 재생 제어 ---------- */
   let restartToken = 0;
-  let setRestartTimer = 0;
+  const restartTimers = new Map(); // 그룹(영상 배열) → 전체 반복 재시작 타이머
 
   function togglePlayer(p) {
-    cancelSetRestart();
+    cancelSetRestart([p]);
     if (isPlayingP(p)) pauseP(p);
     else playP(p);
   }
@@ -346,7 +346,7 @@
   // 전부 준비되면 같은 순간에 재생 (play=false 면 위치만 맞춤)
   async function startTogether(list, wall, play = true) {
     list = list.filter(p => !p.hidden);
-    cancelSetRestart();
+    cancelSetRestart(list);
     // 영상마다 '마지막 요청' 번호를 기록 → 다른 그룹의 요청이 이 요청을 취소하지 않음
     const token = ++restartToken;
     list.forEach(p => { p.startToken = token; });
@@ -367,18 +367,29 @@
   // 처음부터 동시 재생 (기본: 화면에 있는 모든 영상)
   const restartAll = (list = players) => startTogether(list, 0);
 
+  // 전체 반복: 그룹마다 따로 반복. 그룹 안 영상이 모두 끝나면 그 그룹만 처음부터 다시 재생
+  // (AirMap 은 RT 를 기다리지 않음. RT 'Ray + Heatmap' 은 둘이 함께 처음부터 → 서로 맞춰진 채 반복)
   function onEnded() {
     if (!state.setLoop) return;
-    const list = shown();
-    if (list.every(p => p.loop)) return;
-    if (list.every(p => p.loop || isDone(p))) {
-      cancelSetRestart();
-      setRestartTimer = setTimeout(() => restartAll(), SET_RESTART_DELAY);
+    for (const group of loopGroups) {
+      const list = group.filter(p => !p.hidden);
+      if (!list.length || list.every(p => p.loop) || restartTimers.has(group)) continue;
+      if (list.every(p => p.loop || isDone(p))) {
+        restartTimers.set(group, setTimeout(() => {
+          restartTimers.delete(group);
+          startTogether(group, 0);
+        }, SET_RESTART_DELAY));
+      }
     }
   }
-  function cancelSetRestart() {
-    clearTimeout(setRestartTimer);
-    setRestartTimer = 0;
+  // 예약된 재시작 취소 (기본: 전부, 영상 목록을 주면 그 영상이 속한 그룹만)
+  function cancelSetRestart(list = players) {
+    for (const [group, timer] of restartTimers) {
+      if (group.some(p => list.includes(p))) {
+        clearTimeout(timer);
+        restartTimers.delete(group);
+      }
+    }
   }
 
   function setSetLoop(on) {
@@ -399,7 +410,7 @@
 
     s.addEventListener('pointerdown', e => {
       if (e.button !== 0) return;
-      cancelSetRestart();
+      cancelSetRestart([p]);
       p.scrubbing = true;
       s.setPointerCapture(e.pointerId);
       s.classList.add('is-scrubbing');
@@ -435,7 +446,7 @@
       if (t === null) return;
       e.preventDefault();
       e.stopPropagation();
-      cancelSetRestart();
+      cancelSetRestart([p]);
       pauseP(p);
       seekP(p, t);
     });
@@ -443,7 +454,8 @@
 
   /* ---------- 같은 그룹 영상끼리 맞추기 ---------- */
   // 높은 배속에서는 디코딩 부하로 영상끼리 조금씩 벌어질 수 있어, 화면 시간 기준으로 첫 영상에 맞춤
-  const groups = [];
+  const groups = [];     // 영상이 2개 이상인 그룹 (서로 맞추기용)
+  const loopGroups = []; // 모든 그룹 (전체 반복용)
   function alignGroups() {
     for (const group of groups) {
       const list = group.filter(p => !p.hidden);
@@ -569,6 +581,7 @@
       const groupPlayers = vids.map(v => createPlayer(v));
       groupPlayers.forEach(p => body.append(p.panel));
       if (groupPlayers.length > 1) groups.push(groupPlayers);
+      loopGroups.push(groupPlayers);
 
       $('.group-restart', section)?.addEventListener('click', () => restartAll(groupPlayers));
 

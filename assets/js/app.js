@@ -6,10 +6,7 @@
      동시에 재생을 시작합니다 (각자 실제 길이대로 → 속도 차이가 그대로 보임).
    - 반복: 영상별 반복(그 영상만 계속 되풀이)과
            전체 반복(가장 늦게 끝나는 영상까지 끝나면 모두 처음부터 동시에 다시 시작).
-   - 비교 방식: 상단바 버튼 하나로 세 영상을 함께 전환합니다.
-       '속도 비교'   = 원본 영상을 1배속으로 (실제 계산 시간 그대로)
-       '위치별 비교' = 길이를 맞춘 전용 영상(fit)으로 → 같은 순간 = 같은 위치의 path gain
-       전용 영상이 없으면 '영상 길이 ÷ fitSeconds' 배속으로 맞춥니다.
+   - 배속(선택): videos.js 그룹에 rates 를 2개 이상 적으면 그룹 머리에 배속 버튼 표시
        (0.0625×~16× 밖의 배속은 가상 시계에 맞춰 영상 위치를 옮기는 방식으로 흉내 냄)
    ========================================================= */
 (() => {
@@ -27,7 +24,6 @@
     restart: $('#restartAll'),
     toggle: $('#toggleAll'),
     setLoop: $('#setLoop'),
-    modeSeg: $('#modeSeg'),
   };
 
   /* ---------- 유틸 ---------- */
@@ -61,7 +57,6 @@
 
   const state = {
     setLoop: store.get('setLoop', true) !== false,
-    mode: store.get('mode', 'speed') === 'fit' ? 'fit' : 'speed',
   };
 
   /* ---------- 아이콘 ---------- */
@@ -168,31 +163,6 @@
     }
   }
 
-  // 원본('main') ↔ 'N초' 전용 영상('fit') 교체. 위치·재생은 호출한 쪽이 startTogether 로 맞춤
-  function setSourceP(p, variant) {
-    if (p.variant === variant) return;
-    const src = variant === 'fit' ? p.v.fit : p.v;
-    if (!src || !src.file) return;
-    pauseP(p);
-
-    p.variant = variant;
-    p.emu = null;
-    p.rate = 1;
-    p.fps = Number(src.fps) || 30;
-    p.durHint = Number(src.duration) || 0;
-    p.shownDone = null;
-    p.el.msg.hidden = false;
-    p.el.msg.classList.remove('is-error');
-    p.el.msg.textContent = '불러오는 중…';
-    setText(p.el.dur, fmt(p.durHint));
-
-    const v = p.video;
-    v.defaultPlaybackRate = 1;
-    v.playbackRate = 1;
-    v.loop = p.loop;
-    v.src = src.file;
-  }
-
   // 화면에 보이는 시간 = 영상 시간 ÷ 배속 (16배속이면 266초 영상이 16.6초로 표시)
   const wallOf = (p, t) => t / (p.rate || 1);
 
@@ -251,7 +221,7 @@
     const p = {
       v, video, fps: Number(v.fps) || 30,
       rate: 1, loop: false, emu: null,
-      variant: 'main', durHint: Number(v.duration) || 0,
+      durHint: Number(v.duration) || 0,
       el: {}, scrubbing: false, resumeAfterScrub: false,
     };
 
@@ -314,7 +284,7 @@
     video.addEventListener('error', () => {
       p.el.msg.hidden = false;
       p.el.msg.classList.add('is-error');
-      p.el.msg.textContent = `영상을 불러오지 못했습니다\n${p.variant === 'fit' ? p.v.fit.file : v.file}`;
+      p.el.msg.textContent = `영상을 불러오지 못했습니다\n${v.file}`;
     });
     video.addEventListener('ended', () => { if (!p.emu) onEnded(); });
 
@@ -569,7 +539,6 @@
       if (!vids.length) continue;
       const g = info.get(source) || {};
       const views = (Array.isArray(g.views) ? g.views : []).filter(vw => Array.isArray(vw.show) && vw.show.length);
-      const fit = Number(g.fitSeconds) > 0 ? Number(g.fitSeconds) : 0;
       const rates = (Array.isArray(g.rates) ? g.rates : []).map(Number).filter(r => r > 0);
       const section = document.createElement('section');
       section.className = 'group';
@@ -598,7 +567,6 @@
 
       const body = $('.group-body', section);
       const groupPlayers = vids.map(v => createPlayer(v));
-      groupPlayers.forEach(p => { p.fitSec = fit; }); // 전용 영상이 없을 때 '위치별 비교' 배속 계산용
       groupPlayers.forEach(p => body.append(p.panel));
       if (groupPlayers.length > 1) groups.push(groupPlayers);
 
@@ -608,7 +576,7 @@
       const rateSeg = $('.rate-seg', section);
       rateSeg?.addEventListener('click', e => {
         const b = e.target.closest('button[data-rate]');
-        if (!b || b.getAttribute('aria-pressed') === 'true' || state.mode !== 'speed') return;
+        if (!b || b.getAttribute('aria-pressed') === 'true') return;
         const r = Number(b.dataset.rate);
         const vis = groupPlayers.filter(p => !p.hidden);
         const ref = vis[0] || groupPlayers[0];
@@ -639,8 +607,7 @@
           }
         });
         // 새로 띄운 영상이 준비될 때까지 잠깐 기다렸다가, 보이는 영상들을 같은 화면 시간에서 함께 재생
-        // '위치별 비교'에서는 다른 그룹과도 같은 위치여야 하므로 모든 영상을 함께 맞춤
-        if (added) startTogether(state.mode === 'fit' ? players : groupPlayers, refWall, refPlaying);
+        if (added) startTogether(groupPlayers, refWall, refPlaying);
         const visibleCount = groupPlayers.filter(p => !p.hidden).length;
         section.style.setProperty('--n', visibleCount);
         // 그룹 '처음부터 동시 재생'은 영상이 둘 이상 보일 때만 의미가 있으므로 그때만 표시
@@ -671,41 +638,6 @@
     ui.board.style.setProperty('--cols', cols);
   }
 
-  /* ---------- 비교 방식 (상단바) ---------- */
-  const MODES = [
-    { id: 'speed', label: (LIB.modes && LIB.modes.speed) || '속도 비교' },
-    { id: 'fit', label: (LIB.modes && LIB.modes.fit) || '위치별 비교' },
-  ];
-  function buildModeSeg() {
-    if (!ui.modeSeg) return;
-    const hasFit = players.some(p => p.v.fit || p.fitSec > 0);
-    if (!hasFit) { ui.modeSeg.hidden = true; state.mode = 'speed'; return; }
-    ui.modeSeg.innerHTML = MODES.map(m =>
-      `<button type="button" data-mode="${m.id}" aria-pressed="false">${esc(m.label)}</button>`).join('');
-    ui.modeSeg.addEventListener('click', e => {
-      const b = e.target.closest('button[data-mode]');
-      if (b) setMode(b.dataset.mode);
-    });
-  }
-  // 세 영상을 함께 전환한 뒤, 처음부터 동시에 다시 재생
-  function setMode(mode, initial = false) {
-    if (!initial && mode === state.mode) return;
-    state.mode = mode;
-    store.set('mode', mode);
-    players.forEach(p => {
-      if (mode === 'fit' && p.v.fit) { setSourceP(p, 'fit'); return; }
-      setSourceP(p, 'main');
-      setRateP(p, mode === 'fit' && p.fitSec > 0 ? durOf(p) / p.fitSec : 1);
-    });
-    ui.modeSeg?.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
-    // 배속 버튼은 '속도 비교'에서만 표시. 모드를 바꾸면 배속은 항상 1× 로 초기화
-    ui.board.querySelectorAll('.rate-seg').forEach(s => {
-      s.hidden = mode !== 'speed';
-      s.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.rate) === 1)));
-    });
-    if (!initial) restartAll();
-  }
-
   /* ---------- 단축키 ---------- */
   document.addEventListener('keydown', e => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -717,7 +649,6 @@
       case 'Space': toggleAll(); break;
       case 'KeyR': restartAll(); break;
       case 'KeyL': setSetLoop(!state.setLoop); break;
-      case 'KeyM': if (ui.modeSeg && !ui.modeSeg.hidden) setMode(state.mode === 'fit' ? 'speed' : 'fit'); break;
       case 'KeyF': toggleFullscreen(document.documentElement); break;
       default: handled = false;
     }
@@ -741,8 +672,6 @@
     ui.setLoop.addEventListener('click', () => setSetLoop(!state.setLoop));
 
     buildBoard();
-    buildModeSeg();
-    setMode(state.mode, true); // 지난번에 고른 비교 방식으로 시작
     requestAnimationFrame(tick);
     restartAll(); // 처음 들어오면 모든 영상이 준비되는 대로 동시에 재생 시작
   }

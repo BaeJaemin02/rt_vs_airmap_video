@@ -79,23 +79,6 @@ svg.fill { fill: currentColor; stroke: none; }
 
 .topbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
-/* 비교 방식: 속도 비교 | 위치별 비교 */
-.mode-seg {
-  display: inline-flex; gap: 2px; height: 34px; padding: 3px; margin-right: 6px;
-  border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg);
-}
-.mode-seg[hidden] { display: none; }
-.mode-seg button {
-  height: 26px; padding: 0 14px;
-  border: 0; border-radius: 6px; background: none;
-  font: 500 13px/1 var(--font); color: var(--muted); white-space: nowrap;
-  transition: background .15s, color .15s;
-}
-.mode-seg button:hover { color: var(--text); }
-.mode-seg button[aria-pressed="true"] {
-  background: var(--surface-3); color: var(--text); font-weight: 600;
-  box-shadow: inset 0 0 0 1px #3b424e;
-}
 
 /* ---------- 버튼 ---------- */
 
@@ -367,8 +350,6 @@ kbd {
   .topbar { flex-wrap: wrap; padding: 10px 16px; }
   .topbar-actions { width: 100%; justify-content: stretch; }
   .topbar-actions .btn { flex: 1; justify-content: center; }
-  .mode-seg { width: 100%; margin-right: 0; }
-  .mode-seg button { flex: 1; }
 
   .board { display: flex; flex-direction: column; gap: var(--gap); padding: 12px 16px; }
   .group { display: flex; flex-direction: column; }

@@ -368,7 +368,7 @@
   const restartAll = (list = players) => startTogether(list, 0);
 
   // 전체 반복: 그룹마다 따로 반복. 그룹 안 영상이 모두 끝나면 그 그룹만 처음부터 다시 재생
-  // (AirMap 은 RT 를 기다리지 않음. RT 'Ray + Heatmap' 은 둘이 함께 처음부터 → 서로 맞춰진 채 반복)
+  // (AirMap 은 RT 를 기다리지 않음. RT 'Ray + 전파 지도'는 둘이 함께 처음부터 → 서로 맞춰진 채 반복)
   function onEnded() {
     if (!state.setLoop) return;
     for (const group of loopGroups) {

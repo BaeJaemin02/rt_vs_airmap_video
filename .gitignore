@@ -6,3 +6,9 @@ desktop.ini
 
 # 로컬에만 두는 30초 영상 (사이트에서 사용 안 함)
 *_30s_movingman.mp4
+
+# 로컬에만 두는 예전 영상 / 100MiB 넘는 원본
+test_261116_airmap_movingman.mp4
+test_261117_rt_movingman.mp4
+test_261117_rt_ray_movingman.mp4
+*_original.mp4

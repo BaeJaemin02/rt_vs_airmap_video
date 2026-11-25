@@ -35,27 +35,27 @@ window.VIDEO_LIBRARY = {
   videos: [
     {
       id: "rt-ray",
-      file: "test_261117_rt_ray_movingman.mp4",
+      file: "test_261126_rt_ray_movingman.mp4",
       source: "RT",
       kind: "Ray 시각화",
-      date: "2026-11-17",
-      fps: 30, width: 1300, height: 1040, duration: 294.167
+      date: "2026-11-26",
+      fps: 25, width: 1300, height: 1040, duration: 297.36
     },
     {
       id: "rt-heatmap",
-      file: "test_261117_rt_movingman.mp4",
+      file: "test_261126_rt_movingman.mp4",
       source: "RT",
       kind: "전파 지도",
-      date: "2026-11-17",
-      fps: 30, width: 1300, height: 1040, duration: 266
+      date: "2026-11-26",
+      fps: 25, width: 1300, height: 1040, duration: 297.36
     },
     {
       id: "airmap-heatmap",
-      file: "test_261116_airmap_movingman.mp4",
+      file: "test_261126_airmap_movingman.mp4",
       source: "AirMap",
       kind: "전파 지도",
-      date: "2026-11-16",
-      fps: 30, width: 1300, height: 1040, duration: 1.267
+      date: "2026-11-26",
+      fps: 60, width: 1300, height: 1040, duration: 1.233
     }
   ]
 };
